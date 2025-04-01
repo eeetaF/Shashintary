@@ -1,0 +1,26 @@
+# engine used for calculations
+engine: stockfish
+# stockfish / shashchess
+
+# debug mode prints the chess board, steps of program execution
+debug: true
+# true / false
+
+# language of comments
+language: russian
+# any language known.
+
+# players playing white and black. If any not specified, "white / black" will be used.
+player_white: Hikaru Nakamura
+player_black: Magnus Carlsen
+
+# output stream configuration
+output_host: localhost
+output_port: 53002
+
+# whether broadcaster will send board to display
+send_board: true
+
+# display stream configuration
+display_host: localhost
+display_port: 53003
