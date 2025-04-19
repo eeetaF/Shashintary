@@ -1,5 +1,5 @@
 # engine used for calculations
-engine: stockfish
+engine: shashchess
 # stockfish / shashchess
 
 # debug mode prints the chess board, steps of program execution

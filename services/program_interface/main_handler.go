@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"net"
 
+	"Shashintary/modules"
 	config_module "Shashintary/modules/config"
 	"Shashintary/modules/message"
 	"Shashintary/services/broadcast"
+	"Shashintary/services/chess_engine"
 )
 
 func HandleProgram(cfg *config_module.Config) error {
@@ -19,9 +21,13 @@ func HandleProgram(cfg *config_module.Config) error {
 	defer listener.Close()
 
 	inputChannel := make(chan string, 50)
+	validInputMovesChannel := make(chan modules.Input, 50)
+	calculatedMovesChannel := make(chan []modules.CalculatedMove, 1)
 	outputChannel := make(chan []*message.OutputMessage, 50)
+
+	go chess_engine.RunMovesAnalyzer(cfg, validInputMovesChannel, calculatedMovesChannel, 0, 8)
 	go broadcast.RunBroadcaster(cfg.DisplayHost, cfg.DisplayPort, outputChannel)
-	go HandleGame(cfg, inputChannel, outputChannel)
+	go HandleGame(cfg, inputChannel, validInputMovesChannel, calculatedMovesChannel, outputChannel)
 
 	for {
 		fmt.Printf("Waiting for input device to connect on %s\n", address)

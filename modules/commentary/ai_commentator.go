@@ -46,7 +46,7 @@ func generatePromptText(r *PromptOpts) string {
 - Player playing black: %s
 - 
 
-Your comment should feel real, creative and have at most 300 symbols in it. Dont mention that its engine response. Answer as you were a professional chess commentator`,
+Your comment should feel real, creative and have 400-600 symbols in it. Dont mention that its engine response. Answer as you were a professional chess commentator. Don't mention exact evaluation unless it's mate in any. If evaluation changes are minor, don't comment much on them: consider the move good enough. If evaluation changes are big, comment negatively on this move and explain why it's bad`,
 		r.SideMoved,
 		r.Language,
 		r.MoveMade,

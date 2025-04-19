@@ -1,16 +1,20 @@
 package program_interface
 
 import (
-	"time"
+	"fmt"
 
 	"github.com/notnil/chess"
 
+	"Shashintary/modules"
 	"Shashintary/modules/commentary"
 	config_module "Shashintary/modules/config"
 	"Shashintary/modules/message"
 )
 
-func HandleGame(cfg *config_module.Config, inputChannel <-chan string, outputChannel chan<- []*message.OutputMessage) {
+func HandleGame(cfg *config_module.Config, inputChannel <-chan string, validInputMovesChannel chan<- modules.Input,
+	calculatedMovesChannel <-chan []modules.CalculatedMove, outputChannel chan<- []*message.OutputMessage) {
+
+	go handleIncomingCalculatedMoves(cfg, calculatedMovesChannel)
 	sendBoard := *cfg.SendBoard
 	outputChannel <- stringToSliceOfOutputMessages("@", false)
 	for {
@@ -24,24 +28,32 @@ func HandleGame(cfg *config_module.Config, inputChannel <-chan string, outputCha
 			outputChannel <- stringToSliceOfOutputMessages("@Couldn't initialize the game with this FEN. Try again.\n", false)
 			continue
 		}
+		validInputMovesChannel <- modules.Input{Move: game.FEN(), IsFEN: true}
 		if sendBoard {
 			sendBoardToChannel(outputChannel, game)
 		}
 		sendInitialPosition(outputChannel, cfg)
-		//outputChannel <- stringToSliceOfOutputMessages(commentary.SendPrompt(&commentary.PromptRequest{
-		//			BestMove:     "it's a starting position, any book move is good",
-		//			MoveMade:     "none yet",
-		//			EvalBefore:   "0",
-		//			EvalAfter:    "0",
-		//			SideMoved:    "none yet",
-		//			Continuation: "any book move",
-		//			FEN:          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-		//			PlayerBlack:  cfg.PlayerBlack,
-		//			PlayerWhite:  cfg.PlayerWhite,
-		//			Language:     cfg.Language,
-		//		}), false)
-		//}
-		time.Sleep(time.Hour)
+
+		for game.Outcome() == chess.NoOutcome {
+			move := <-inputChannel
+			err = game.MoveStr(move)
+			if err != nil {
+				fmt.Printf("received invalid move: %s\n", move)
+				continue
+			}
+			move = game.Moves()[len(game.Moves())-1].String() // always in UCI notation
+
+			validInputMovesChannel <- modules.Input{Move: move, IsFEN: false}
+
+			sendBoardToChannel(outputChannel, game)
+			color := game.Position().Turn().String()
+			if color == "w" {
+				color = "black"
+			} else {
+				color = "white"
+			}
+			outputChannel <- stringToSliceOfOutputMessages(getPromptResult(move, color, game.FEN()), false)
+		}
 	}
 }
 
