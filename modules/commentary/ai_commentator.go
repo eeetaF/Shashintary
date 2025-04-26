@@ -37,7 +37,7 @@ func generatePromptText(r *PromptOpts) string {
 	return fmt.Sprintf(
 		`You are a chess commentator. Comment a move made by (%s), as a real commentator would. Answer strictly in the following language: %s 
 - Move: %s
-- Best move according to the engine: %s
+- Best move in position: %s
 - Evaluation before this move: %s
 - Evaluation after this move: %s
 - Best continuation: %s
@@ -46,7 +46,7 @@ func generatePromptText(r *PromptOpts) string {
 - Player playing black: %s
 - 
 
-Your comment should feel real, creative and have 400-600 symbols in it. Dont mention that its engine response. Answer as you were a professional chess commentator. Don't mention exact evaluation unless it's mate in any. If evaluation changes are minor, don't comment much on them: consider the move good enough. If evaluation changes are big, comment negatively on this move and explain why it's bad`,
+Your comment should feel real, creative and have 400-600 symbols in it. Dont mention that its engine response. Answer as you were a professional chess commentator. Never mention exact evaluation. If evaluation changes are minor: consider the move good enough. If evaluation changes are big (2 or more points), comment negatively on this move and explain why it's bad. If the move made and best move are the same, consider this move the best in the position and explain why it's so good. If you see "MX" in evaluation, it means it's mate in X. If it's "-MX", it means it's mate in X against us. `,
 		r.SideMoved,
 		r.Language,
 		r.MoveMade,
@@ -70,8 +70,8 @@ func SendPrompt(opts *PromptOpts) string {
 	fmt.Println("prompt: ")
 	fmt.Println(request.Prompt)
 	fmt.Println()
-	request.MinTokens = 50
-	request.MaxTokens = 200
+	request.MinTokens = 200
+	request.MaxTokens = 400
 	request.Temperature = 0.7
 
 	payload, _ := json.Marshal(*request)

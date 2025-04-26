@@ -54,6 +54,8 @@ func HandleGame(cfg *config_module.Config, inputChannel <-chan string, validInpu
 			}
 			outputChannel <- stringToSliceOfOutputMessages(getPromptResult(move, color, game.FEN()), false)
 		}
+		outputChannel <- stringToSliceOfOutputMessages("Game is finished. Write anything to continue...", false)
+		<-inputChannel
 	}
 }
 

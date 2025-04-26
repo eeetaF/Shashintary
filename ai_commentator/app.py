@@ -13,8 +13,8 @@ def generate():
     data = request.get_json()
 
     prompt = data.get("prompt")
-    min_tokens = data.get("min_tokens", 50)
-    max_tokens = data.get("max_tokens", 200)
+    min_tokens = data.get("min_tokens", 200)
+    max_tokens = data.get("max_tokens", 400)
     temperature = data.get("temperature", 0.7)
 
     if not prompt:
@@ -39,6 +39,7 @@ def generate():
     try:
         response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
         response.raise_for_status()
+        print("RESPONSE JSON:", response.json())  # <-- debug output
         result = response.json()["choices"][0]["message"]["content"]
         return jsonify({"result": result})
     except Exception as e:

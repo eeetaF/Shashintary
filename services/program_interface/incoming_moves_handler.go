@@ -2,7 +2,6 @@ package program_interface
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"Shashintary/modules"
@@ -50,9 +49,6 @@ func handleIncomingCalculatedMoves(cfg *config_module.Config, incomingMoves <-ch
 
 		select {
 		case move := <-pc.requestChan: // request already present
-			fmt.Println("")
-			fmt.Println("Request present before prompts sent")
-			fmt.Println("")
 			if move.Side == "black" {
 				pc.sideToMove = "white"
 			} else {
@@ -63,9 +59,6 @@ func handleIncomingCalculatedMoves(cfg *config_module.Config, incomingMoves <-ch
 			continue
 
 		default: // request not received yet, calculate for every move
-			fmt.Println("")
-			fmt.Println("Request not received yet. Starting prompting")
-			fmt.Println("")
 			ctx, cancelFn := context.WithCancel(context.Background())
 			promptsChan := make(chan readyPrompt)
 			sendPromptForAllMoves(ctx, promptsChan, pc.sideToMove)
@@ -78,23 +71,14 @@ func handleIncomingCalculatedMoves(cfg *config_module.Config, incomingMoves <-ch
 			}
 
 			if _, ok := pc.moves[move.Move]; !ok { // we didn't face this move
-				fmt.Println("")
-				fmt.Println("Didn't face this move. Starting single prompt")
-				fmt.Println("")
 				cancelFn()
 				pc.responseChan <- sendSinglePromptRequest(move.Move, move.Side, move.FEN)
 			}
 
 			// we did face this move and the result is being calculated
 			for {
-				fmt.Println("")
-				fmt.Println("We did face this move!")
-				fmt.Println("")
 				currRes := <-promptsChan
 				if currRes.move == move.Move {
-					fmt.Println("")
-					fmt.Println("Found!")
-					fmt.Println("")
 					cancelFn()
 					pc.responseChan <- currRes.prompt
 					break
