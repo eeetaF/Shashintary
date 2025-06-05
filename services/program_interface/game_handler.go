@@ -9,6 +9,7 @@ import (
 	"Shashintary/modules/commentary"
 	config_module "Shashintary/modules/config"
 	"Shashintary/modules/message"
+	"Shashintary/modules/shashin"
 )
 
 func HandleGame(cfg *config_module.Config, inputChannel <-chan string, validInputMovesChannel chan<- modules.Input,
@@ -52,7 +53,8 @@ func HandleGame(cfg *config_module.Config, inputChannel <-chan string, validInpu
 			} else {
 				color = "white"
 			}
-			outputChannel <- stringToSliceOfOutputMessages(getPromptResult(move, color, game.FEN()), false)
+			shashType := shashin.GetPositionType(game)
+			outputChannel <- stringToSliceOfOutputMessages(getPromptResult(move, color, game.FEN(), shashType), false)
 		}
 		outputChannel <- stringToSliceOfOutputMessages("Game is finished. Write anything to continue...", false)
 		<-inputChannel

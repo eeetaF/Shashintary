@@ -10,9 +10,10 @@ import (
 )
 
 type RequestForMove struct {
-	Move string // e2e4
-	Side string // white
-	FEN  string // ....
+	Move        string // e2e4
+	Side        string // white
+	FEN         string // ....
+	ShashinType int8   // -2 for Petrosian, -1 CP, 0 Capablanca, 1 CT, 2 Tal
 }
 type preCalculated struct {
 	bestMove     modules.CalculatedMove
@@ -36,6 +37,7 @@ func handleIncomingCalculatedMoves(cfg *config_module.Config, incomingMoves <-ch
 	pc.requestChan = make(chan RequestForMove)
 	pc.responseChan = make(chan string)
 	pc.sideToMove = "white" // TODO fix this for game that start with black's move
+
 	for {
 		calculatedMoves := <-incomingMoves
 
@@ -98,6 +100,7 @@ func sendPromptForAllMoves(ctx context.Context, prompts chan<- readyPrompt, side
 func sendSinglePromptRequest(moveUCI, sideMoved, fen string) string {
 	return commentary.SendPrompt(generateOpts(moveUCI, sideMoved, fen))
 }
+
 func sendPromptRequest(ctx context.Context, promptsChan chan<- readyPrompt, moveUCI, sideMoved, fen string) {
 	result := commentary.SendPrompt(generateOpts(moveUCI, sideMoved, fen))
 	select {
@@ -131,8 +134,8 @@ func generateOpts(moveUCI, sideMoved, fen string) *commentary.PromptOpts {
 	return opts
 }
 
-func getPromptResult(moveUCI string, side string, fen string) string {
-	pc.requestChan <- RequestForMove{Move: moveUCI, Side: side, FEN: fen}
+func getPromptResult(moveUCI, side, fen string, shashType int8) string {
+	pc.requestChan <- RequestForMove{Move: moveUCI, Side: side, FEN: fen, ShashinType: shashType}
 	resp := <-pc.responseChan
 	return resp
 }
