@@ -2,6 +2,8 @@ package program_interface
 
 import (
 	"context"
+	"math"
+	"strconv"
 	"strings"
 
 	"Shashintary/modules"
@@ -14,6 +16,7 @@ type RequestForMove struct {
 	Side        string // white
 	FEN         string // ....
 	ShashinType int8   // -2 for Petrosian, -1 CP, 0 Capablanca, 1 CT, 2 Tal
+	Piece       string // King
 }
 type preCalculated struct {
 	bestMove     modules.CalculatedMove
@@ -56,7 +59,7 @@ func handleIncomingCalculatedMoves(cfg *config_module.Config, incomingMoves <-ch
 			} else {
 				pc.sideToMove = "black"
 			}
-			resp := sendSinglePromptRequest(move.Move, move.Side, move.FEN)
+			resp := sendSinglePromptRequest(move.Move, move.Side, move.FEN, move.Piece, move.ShashinType)
 			pc.responseChan <- resp
 			continue
 
@@ -74,7 +77,7 @@ func handleIncomingCalculatedMoves(cfg *config_module.Config, incomingMoves <-ch
 
 			if _, ok := pc.moves[move.Move]; !ok { // we didn't face this move
 				cancelFn()
-				pc.responseChan <- sendSinglePromptRequest(move.Move, move.Side, move.FEN)
+				pc.responseChan <- sendSinglePromptRequest(move.Move, move.Side, move.FEN, move.Piece, move.ShashinType)
 			}
 
 			// we did face this move and the result is being calculated
@@ -93,16 +96,16 @@ func handleIncomingCalculatedMoves(cfg *config_module.Config, incomingMoves <-ch
 
 func sendPromptForAllMoves(ctx context.Context, prompts chan<- readyPrompt, sideMoved string) {
 	for _, move := range pc.moves {
-		go sendPromptRequest(ctx, prompts, move.Move, sideMoved, "")
+		go sendPromptRequest(ctx, prompts, move.Move, sideMoved, "", "", 0)
 	}
 }
 
-func sendSinglePromptRequest(moveUCI, sideMoved, fen string) string {
-	return commentary.SendPrompt(generateOpts(moveUCI, sideMoved, fen))
+func sendSinglePromptRequest(moveUCI, sideMoved, fen, piece string, shashin int8) string {
+	return commentary.SendPrompt(generateOpts(moveUCI, sideMoved, fen, piece, shashin))
 }
 
-func sendPromptRequest(ctx context.Context, promptsChan chan<- readyPrompt, moveUCI, sideMoved, fen string) {
-	result := commentary.SendPrompt(generateOpts(moveUCI, sideMoved, fen))
+func sendPromptRequest(ctx context.Context, promptsChan chan<- readyPrompt, moveUCI, sideMoved, fen, piece string, shashin int8) {
+	result := commentary.SendPrompt(generateOpts(moveUCI, sideMoved, fen, piece, shashin))
 	select {
 	case promptsChan <- readyPrompt{
 		move:   moveUCI,
@@ -114,28 +117,81 @@ func sendPromptRequest(ctx context.Context, promptsChan chan<- readyPrompt, move
 	}
 }
 
-func generateOpts(moveUCI, sideMoved, fen string) *commentary.PromptOpts {
+func generateOpts(moveUCI, sideMoved, fen, piece string, shashin int8) *commentary.PromptOpts {
 	opts := &commentary.PromptOpts{
-		BestMove:    pc.bestMove.Move,
-		MoveMade:    moveUCI,
-		EvalBefore:  pc.bestMove.ScoreInCP,
-		SideMoved:   sideMoved,
-		FEN:         fen,
-		PlayerBlack: pc.cfg.PlayerBlack,
-		PlayerWhite: pc.cfg.PlayerWhite,
-		Language:    pc.cfg.Language,
+		BestMove:           pc.bestMove.Move,
+		MoveMade:           moveUCI,
+		PieceMakingTheMove: piece,
+		SideMoved:          sideMoved,
+		FEN:                fen,
+		PlayerBlack:        pc.cfg.PlayerBlack,
+		PlayerWhite:        pc.cfg.PlayerWhite,
+		Language:           pc.cfg.Language,
+		Shashin:            shashin,
 	}
 	if moveInfo, ok := pc.moves[moveUCI]; ok {
-		opts.EvalAfter = moveInfo.ScoreInCP
+		opts.EvalTrend = generateEvalTrend(pc.bestMove.ScoreInCP, moveInfo.ScoreInCP)
 		opts.Continuation = strings.Join(moveInfo.ContinuationMoves[1:], " ")
 	} else {
-		opts.EvalAfter = "much less that a move before"
+		opts.EvalTrend = "dropped drastically"
 	}
 	return opts
 }
 
-func getPromptResult(moveUCI, side, fen string, shashType int8) string {
-	pc.requestChan <- RequestForMove{Move: moveUCI, Side: side, FEN: fen, ShashinType: shashType}
+func generateEvalTrend(evalBefore, evalAfter string) string {
+	if strings.HasPrefix(evalAfter, "M") || strings.HasPrefix(evalAfter, "-M") {
+		if strings.HasPrefix(evalAfter, "M") {
+			return "a mating sequence was found"
+		}
+		return "we are about to get mated"
+	}
+
+	eBefore, err1 := strconv.ParseFloat(evalBefore, 64)
+	eAfter, err2 := strconv.ParseFloat(evalAfter, 64)
+
+	if err1 != nil || err2 != nil {
+		return "no significant change detected"
+	}
+
+	delta := eAfter - eBefore
+	absDelta := math.Abs(delta)
+
+	switch {
+	case absDelta >= 2.0:
+		if delta < 0 {
+			return "dropped drastically"
+		}
+		return "improved dramatically"
+	case absDelta >= 0.5:
+		if delta < 0 {
+			return "slightly worsened"
+		}
+		return "slightly improved"
+	default:
+		return "remained mostly stable"
+	}
+}
+
+func getPromptResult(moveUCI, side, fen string, shashType int8, piece string) string {
+	pc.requestChan <- RequestForMove{Move: moveUCI, Side: side, FEN: fen, ShashinType: shashType, Piece: toPiece(piece)}
 	resp := <-pc.responseChan
 	return resp
+}
+
+func toPiece(short string) string {
+	switch short {
+	case "k":
+		return "King"
+	case "q":
+		return "Queen"
+	case "r":
+		return "Rook"
+	case "b":
+		return "Bishop"
+	case "n":
+		return "Knight"
+	case "p":
+		return "Pawn"
+	}
+	return ""
 }

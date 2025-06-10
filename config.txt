@@ -11,8 +11,8 @@ language: russian
 # any language known.
 
 # players playing white and black. If any not specified, "white / black" will be used.
-player_white: Hikaru Nakamura
-player_black: Magnus Carlsen
+player_white: Хикару Накамура
+player_black: Магнус Карлсен
 
 # output stream configuration
 output_host: localhost

@@ -35,6 +35,8 @@ func HandleGame(cfg *config_module.Config, inputChannel <-chan string, validInpu
 		}
 		sendInitialPosition(outputChannel, cfg)
 
+		var prevShashType int8
+
 		for game.Outcome() == chess.NoOutcome {
 			move := <-inputChannel
 			err = game.MoveStr(move)
@@ -42,9 +44,9 @@ func HandleGame(cfg *config_module.Config, inputChannel <-chan string, validInpu
 				fmt.Printf("received invalid move: %s\n", move)
 				continue
 			}
-			move = game.Moves()[len(game.Moves())-1].String() // always in UCI notation
+			moveMade := game.Moves()[len(game.Moves())-1] // always in UCI notation
 
-			validInputMovesChannel <- modules.Input{Move: move, IsFEN: false}
+			validInputMovesChannel <- modules.Input{Move: moveMade.String(), IsFEN: false}
 
 			sendBoardToChannel(outputChannel, game)
 			color := game.Position().Turn().String()
@@ -53,8 +55,10 @@ func HandleGame(cfg *config_module.Config, inputChannel <-chan string, validInpu
 			} else {
 				color = "white"
 			}
-			shashType := shashin.GetPositionType(game)
-			outputChannel <- stringToSliceOfOutputMessages(getPromptResult(move, color, game.FEN(), shashType), false)
+
+			piece := game.Position().Board().SquareMap()[moveMade.S2()].Type().String()
+			outputChannel <- stringToSliceOfOutputMessages(getPromptResult(moveMade.String(), color, game.FEN(), prevShashType, piece), false)
+			prevShashType = shashin.GetPositionType(game)
 		}
 		outputChannel <- stringToSliceOfOutputMessages("Game is finished. Write anything to continue...", false)
 		<-inputChannel
