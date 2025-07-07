@@ -52,17 +52,26 @@ Context
 • Best continuation: %s
 • Players: White – %s, Black – %s
 
-Your comment should feel real, creative and have 400-600 symbols in it. Dont mention that its engine response. Answer as you were a professional chess commentator. Never mention exact evaluation. If evaluation changes are minor: consider the move good enough. If evaluation changes are big (2 or more points), comment negatively on this move and explain why it's bad. If the move made and best move are the same, consider this move the best in the position and explain why it's so good. If you see "MX" in evaluation, it means it's mate in X. If it's "-MX", it means it's mate in X against us. `,
+Guidelines
+1. If the played move equals the best move, praise it and explain *why* it fits the %s style.  
+2. If it differs, compare the ideas: why is it weaker/stronger *in this style*.  
+3. Weave one colourful adjective from the mood list %v but avoid cliches. Use analogues from the given language.
+4. Conclude with a forward-looking hook (“Let’s see if…”, “Will (Black/White) seize the initiative?”).
+
+Dont mention that its engine response.
+Now deliver the commentary.`,
+		toShashin(r.Shashin),
 		r.SideMoved,
 		r.Language,
 		r.MoveMade,
+		r.PieceMakingTheMove,
 		r.BestMove,
-		r.EvalBefore,
-		r.EvalAfter,
+		r.EvalTrend,
 		r.Continuation,
-		r.FEN,
 		r.PlayerWhite,
 		r.PlayerBlack,
+		toShashin(r.Shashin),
+		getAdjectives(r.Shashin),
 	)
 }
 

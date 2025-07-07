@@ -36,6 +36,10 @@ func getSafetyFactor(game *chess.Game) int8 {
 		}
 	}
 
+	if diff == 0 {
+		return 0
+	}
+
 	var power int8 = 3
 
 	if float32(abs(diff))/float32(totalAttackingMoves) < 0.4 || totalAttackingMoves < 4 {

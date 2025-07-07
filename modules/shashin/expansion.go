@@ -29,9 +29,9 @@ func getExpansionFactor(pos *chess.Position) int8 {
 	}
 
 	switch {
-	case whiteExpansion > blackExpansion:
-		return res
 	case whiteExpansion < blackExpansion:
+		return res
+	case whiteExpansion > blackExpansion:
 		return -res
 	}
 
